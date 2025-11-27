@@ -35,4 +35,19 @@ return [
         ],
     ],
 
+    'gamma' => [
+        'api_key' => env('GAMMA_API_KEY'),
+    ],
+
+    'twilio' => [
+        'account_sid' => env('TWILIO_SID'),
+        'auth_token' => env('TWILIO_TOKEN'),
+        'phone_number' => env('TWILIO_PHONE_NUMBER'),
+        'whatsapp_number' => env('TWILIO_WHATSAPP_NUMBER'),
+    ],
+
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+    ],
+
 ];
