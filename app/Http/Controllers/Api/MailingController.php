@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Mailing\StoreMailingRequest;
 use App\Http\Requests\Mailing\UpdateMailingRequest;
+use App\Http\Requests\Mailing\SendBulkEmailRequest;
+use App\Http\Requests\Mailing\SendBulkWhatsAppRequest;
 use App\Models\Mailing;
 use App\Models\Event;
 use App\Models\Guest;
@@ -267,5 +269,133 @@ class MailingController extends Controller
         ];
 
         return response()->json($stats);
+    }
+
+    /**
+     * Send bulk emails
+     */
+    public function sendBulkEmail(SendBulkEmailRequest $request)
+    {
+        try {
+            $validated = $request->validated();
+            $recipients = $validated['recipients'];
+            $successful = 0;
+            $failed = 0;
+            $results = [];
+
+            foreach ($recipients as $recipient) {
+                $result = $this->sendEmailMessage(
+                    $recipient,
+                    $validated['subject'],
+                    $validated['body']
+                );
+
+                $results[] = [
+                    'recipient' => $recipient,
+                    'result' => $result,
+                ];
+
+                if ($result['status'] === 'success') {
+                    $successful++;
+                } else {
+                    $failed++;
+                }
+            }
+
+            // Create mailing record
+            $mailing = Mailing::create([
+                'event_id' => $validated['event_id'],
+                'subject' => $validated['subject'],
+                'body' => $validated['body'],
+                'channel' => 'email',
+                'type' => 'bulk',
+                'recipient_type' => 'custom',
+                'recipients' => $recipients,
+                'status' => $failed === 0 ? 'sent' : 'failed',
+                'sent_at' => now(),
+                'sent_count' => $successful,
+                'failed_count' => $failed,
+                'metadata' => ['results' => $results],
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Bulk emails sent',
+                'data' => [
+                    'total' => count($recipients),
+                    'successful' => $successful,
+                    'failed' => $failed,
+                    'mailing_id' => $mailing->id,
+                ],
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to send bulk emails: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Send bulk WhatsApp messages
+     */
+    public function sendBulkWhatsApp(SendBulkWhatsAppRequest $request)
+    {
+        try {
+            $validated = $request->validated();
+            $recipients = $validated['recipients'];
+            $successful = 0;
+            $failed = 0;
+            $results = [];
+
+            foreach ($recipients as $recipient) {
+                $result = $this->twilioService->sendWhatsApp(
+                    $recipient,
+                    $validated['message']
+                );
+
+                $results[] = [
+                    'recipient' => $recipient,
+                    'result' => $result,
+                ];
+
+                if ($result['status'] === 'success') {
+                    $successful++;
+                } else {
+                    $failed++;
+                }
+            }
+
+            // Create mailing record
+            $mailing = Mailing::create([
+                'event_id' => $validated['event_id'],
+                'body' => $validated['message'],
+                'channel' => 'whatsapp',
+                'type' => 'bulk',
+                'recipient_type' => 'custom',
+                'recipients' => $recipients,
+                'status' => $failed === 0 ? 'sent' : 'failed',
+                'sent_at' => now(),
+                'sent_count' => $successful,
+                'failed_count' => $failed,
+                'metadata' => ['results' => $results],
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Bulk WhatsApp messages sent',
+                'data' => [
+                    'total' => count($recipients),
+                    'successful' => $successful,
+                    'failed' => $failed,
+                    'mailing_id' => $mailing->id,
+                ],
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to send bulk WhatsApp messages: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }

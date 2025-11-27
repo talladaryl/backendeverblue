@@ -37,10 +37,22 @@ Route::apiResource('tickets', TicketController::class);
 Route::apiResource('assets', AssetController::class);
 Route::apiResource('payments', PaymentController::class);
 
+// Event specific routes
+Route::post('events/{event}/change-status', [EventController::class, 'changeStatus'])->name('events.changeStatus');
+Route::post('events/{event}/archive', [EventController::class, 'archive'])->name('events.archive');
+Route::post('events/{event}/unarchive', [EventController::class, 'unarchive'])->name('events.unarchive');
+Route::get('events/archived/list', [EventController::class, 'archived'])->name('events.archived');
+Route::get('events/active/list', [EventController::class, 'active'])->name('events.active');
+Route::get('events/upcoming/list', [EventController::class, 'upcoming'])->name('events.upcoming');
+Route::get('events/past/list', [EventController::class, 'past'])->name('events.past');
+Route::get('events/statistics/all', [EventController::class, 'statistics'])->name('events.statistics');
+
 // Mailing specific routes
 Route::post('mailings/{mailing}/send', [MailingController::class, 'send'])->name('mailings.send');
 Route::post('mailings/{mailing}/test', [MailingController::class, 'sendTest'])->name('mailings.test');
 Route::get('events/{event}/mailings/statistics', [MailingController::class, 'statistics'])->name('mailings.statistics');
+Route::post('mailings/bulk/email', [MailingController::class, 'sendBulkEmail'])->name('mailings.bulkEmail');
+Route::post('mailings/bulk/whatsapp', [MailingController::class, 'sendBulkWhatsApp'])->name('mailings.bulkWhatsApp');
 
 Route::post('events/{event}/guests/import', [GuestController::class, 'import'])->name('guests.import');
 

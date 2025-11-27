@@ -27,20 +27,32 @@ class OpenAIImageService
 
     /**
      * Generate an image using OpenAI API
+     * Compatible with frontend chatbot
      *
      * @param string $prompt The text prompt for image generation
-     * @param array $options Additional options (size, quality, style, etc.)
+     * @param array $options Additional options (size, quality, model, etc.)
      * @return array
      */
     public function generateImage(string $prompt, array $options = []): array
     {
         try {
+            $model = $options['model'] ?? 'dall-e-3';
+            $size = $options['size'] ?? '1024x1024';
+            $quality = $options['quality'] ?? 'standard';
+            $numImages = $options['num_images'] ?? 1;
+
+            // DALL-E 3 only supports 1 image at a time
+            if ($model === 'dall-e-3') {
+                $numImages = 1;
+            }
+
             $payload = [
                 'prompt' => $prompt,
-                'n' => $options['num_images'] ?? 1,
-                'size' => $options['size'] ?? '1024x1024',
-                'quality' => $options['quality'] ?? 'standard',
-                'model' => $options['model'] ?? 'dall-e-3',
+                'n' => $numImages,
+                'size' => $size,
+                'quality' => $quality,
+                'model' => $model,
+                'response_format' => 'url', // Return URL instead of base64
             ];
 
             $response = $this->client->post('images/generations', [
@@ -51,13 +63,14 @@ class OpenAIImageService
 
             if ($response->getStatusCode() === 200 && isset($data['data'])) {
                 $images = array_map(function ($item) {
-                    return $item['url'] ?? $item['b64_json'] ?? null;
+                    return $item['url'] ?? null;
                 }, $data['data']);
 
                 return [
                     'status' => 'success',
                     'images' => array_filter($images),
                     'created' => $data['created'] ?? null,
+                    'model' => $model,
                 ];
             }
 
@@ -71,6 +84,13 @@ class OpenAIImageService
             return [
                 'status' => 'error',
                 'message' => 'API request failed: ' . $e->getMessage(),
+            ];
+        } catch (\Exception $e) {
+            Log::error('OpenAI Service Error: ' . $e->getMessage());
+
+            return [
+                'status' => 'error',
+                'message' => 'Service error: ' . $e->getMessage(),
             ];
         }
     }
@@ -126,5 +146,21 @@ class OpenAIImageService
             'vivid',
             'natural',
         ];
+    }
+
+    /**
+     * Validate API key
+     *
+     * @return bool
+     */
+    public function validateApiKey(): bool
+    {
+        try {
+            $response = $this->client->get('models');
+            return $response->getStatusCode() === 200;
+        } catch (GuzzleException $e) {
+            Log::error('OpenAI API Key Validation Error: ' . $e->getMessage());
+            return false;
+        }
     }
 }

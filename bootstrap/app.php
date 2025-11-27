@@ -19,7 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Cookies
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
-        // CORS Middleware sur toutes les routes
+        // CORS Middleware sur toutes les routes (avant tout)
         $middleware->prepend(\App\Http\Middleware\CorsMiddleware::class);
 
         // Middlewares pour Web
@@ -33,7 +33,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(prepend: [
             // Gère les SPA stateful (React + Sanctum)
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-            // Autres middlewares API nécessaires, si besoin
+        ]);
+
+        // Alias pour les middlewares
+        $middleware->alias([
+            'cors' => \App\Http\Middleware\CorsMiddleware::class,
         ]);
 
     })
