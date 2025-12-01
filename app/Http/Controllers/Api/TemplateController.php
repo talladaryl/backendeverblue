@@ -16,7 +16,12 @@ class TemplateController extends Controller
 
     public function store(StoreTemplateRequest $request)
     {
-        $template = Template::create($request->validated());
+        $data = $request->validated();
+
+        // Assure-toi que 'structure' a toujours une valeur pour éviter l'erreur SQL
+        $data['structure'] = $data['structure'] ?? '{}';
+
+        $template = Template::create($data);
 
         return response()->json($template, 201);
     }
@@ -28,7 +33,10 @@ class TemplateController extends Controller
 
     public function update(UpdateTemplateRequest $request, Template $template)
     {
-        $template->update($request->validated());
+        $data = $request->validated();
+        $data['structure'] = $data['structure'] ?? $template->structure;
+
+        $template->update($data);
 
         return response()->json($template);
     }

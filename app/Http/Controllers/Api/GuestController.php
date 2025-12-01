@@ -42,15 +42,29 @@ class GuestController extends Controller
         return response()->json(['message' => 'Guest deleted successfully']);
     }
 
-    public function import(ImportGuestRequest $request, Event $event)
+    public function getValidGuestsByEvent(Event $event)
     {
+        $guests = $event->guests()->get()->map(function ($guest) {
+            $guest->status = ($guest->email || $guest->phone) ? 'valid' : 'invalid';
+            return $guest;
+        });
+
+        $validGuests = $guests->filter(fn($guest) => $guest->status === 'valid');
+
+        return response()->json($validGuests);
+    }
+
+    public function import(ImportGuestRequest $request, Event $event)
+    {   
         $guests = [];
         foreach ($request->validated()['guests'] as $guestData) {
             $guests[] = Guest::create([
                 'event_id' => $event->id,
-                'name' => $guestData['name'],
-                'email' => $guestData['email'],
+                'full_name' => $guestData['full_name'] ?? 'Invité sans nom',
+                'email' => $guestData['email'] ?? null,
                 'phone' => $guestData['phone'] ?? null,
+                'plus_one_allowed' => $guestData['plus_one_allowed'] ?? false,
+                'metadata' => $guestData['metadata'] ?? null,
             ]);
         }
 

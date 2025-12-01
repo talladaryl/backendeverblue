@@ -177,7 +177,7 @@ POST http://127.0.0.1:8000/api/guests
 {
   "event_id": 1,
   "name": "Jane Smith",
-  "email": "jane@example.com",
+  "email": "jane@example.com", 
   "phone": "+33612345678"
 }
 ```

@@ -14,7 +14,7 @@ class ChangeStatusRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'status' => 'required|string|in:planning,confirmed,ongoing,completed,cancelled',
+            'status' => 'required|string|in:draft,active,archived',
         ];
     }
 
@@ -22,7 +22,7 @@ class ChangeStatusRequest extends FormRequest
     {
         return [
             'status.required' => 'Le statut est requis',
-            'status.in' => 'Le statut doit être: planning, confirmed, ongoing, completed ou cancelled',
+            'status.in' => 'Le statut doit être: draft, active, archived',
         ];
     }
 }

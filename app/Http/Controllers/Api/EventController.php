@@ -48,7 +48,7 @@ class EventController extends Controller
         $event = Event::create(array_merge(
             $request->validated(),
             [
-                'status' => 'planning',
+                'status' => 'active',
                 'is_archived' => false,
             ]
         ));
@@ -178,11 +178,9 @@ class EventController extends Controller
             'active' => Event::active()->count(),
             'archived' => Event::archived()->count(),
             'by_status' => [
-                'planning' => Event::byStatus('planning')->count(),
-                'confirmed' => Event::byStatus('confirmed')->count(),
-                'ongoing' => Event::byStatus('ongoing')->count(),
-                'completed' => Event::byStatus('completed')->count(),
-                'cancelled' => Event::byStatus('cancelled')->count(),
+                'active' => Event::byStatus('archivedactive')->count(),
+                'draft' => Event::byStatus('ongoing')->count(),
+                'archived' => Event::byStatus('completed')->count(),
             ],
             'upcoming' => Event::upcoming()->count(),
             'past' => Event::past()->count(),

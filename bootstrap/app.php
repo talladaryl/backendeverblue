@@ -10,7 +10,7 @@ use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__ . '/../routes/web.php',
-        api: __DIR__ . '/../routes/api.php', // Assurez-vous que les routes API sont bien chargées
+        api: __DIR__ . '/../routes/api.php', 
         commands: __DIR__ . '/../routes/console.php',
         health: '/up',
     )
@@ -19,29 +19,29 @@ return Application::configure(basePath: dirname(__DIR__))
         // Cookies
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
-        // CORS Middleware sur toutes les routes (avant tout)
-        $middleware->prepend(\App\Http\Middleware\CorsMiddleware::class);
+        /**
+         * CORS (Laravel natif)
+         */
+        $middleware->prepend(\Illuminate\Http\Middleware\HandleCors::class);
 
-        // Middlewares pour Web
+        // Web middleware
         $middleware->web(append: [
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
 
-        // Middlewares pour API
+        /**
+         * API Middleware
+         * ❌ On ignore Sanctum et CSRF pour l'API
+         */
         $middleware->api(prepend: [
-            // Gère les SPA stateful (React + Sanctum)
-            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-        ]);
-
-        // Alias pour les middlewares
-        $middleware->alias([
-            'cors' => \App\Http\Middleware\CorsMiddleware::class,
+            // Si tu veux, tu peux supprimer EnsureFrontendRequestsAreStateful
+            // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
         ]);
 
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        // Configurations des exceptions
+        // Configuration des exceptions
     })
     ->create();
