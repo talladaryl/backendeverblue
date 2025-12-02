@@ -17,6 +17,7 @@ class UpdateGuestRequest extends FormRequest
             'name' => 'nullable|string|max:255',
             'email' => 'nullable|string|email|max:255',
             'phone' => 'nullable|string',
+            'canal' => 'nullable|string|in:email,sms,whatsapp,mms',
             'status' => 'nullable|string',
         ];
     }

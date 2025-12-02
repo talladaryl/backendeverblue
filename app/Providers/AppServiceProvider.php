@@ -31,6 +31,13 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\TwilioService::class, function ($app) {
             return new \App\Services\TwilioService();
         });
+
+        // Register BulkSendService
+        $this->app->singleton(\App\Services\BulkSendService::class, function ($app) {
+            return new \App\Services\BulkSendService(
+                $app->make(\App\Services\TwilioService::class)
+            );
+        });
     }
 
     /**

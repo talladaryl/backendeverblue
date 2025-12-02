@@ -3,136 +3,84 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\BulkSend;
-use App\Http\Requests\BulkSend\StoreBulkSendRequest;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Http\Requests\Mailing\BulkSendRequest;
+use App\Models\Event;
+use App\Services\BulkSendService;
 
 class BulkSendController extends Controller
 {
+    public function __construct(
+        private BulkSendService $bulkSendService
+    ) {}
+
     /**
-     * Créer un envoi en masse
+     * Envoyer en masse via un événement
+     * Récupère le template et les guests de l'événement
      */
-    public function store(StoreBulkSendRequest $request)
+    public function send(BulkSendRequest $request)
     {
-        $validated = $request->validated();
+        try {
+            $event = Event::findOrFail($request->input('event_id'));
+            $channel = $request->input('channel');
+            $subject = $request->input('subject');
 
-        $bulkSend = BulkSend::create([
-            'user_id' => Auth::id(),
-            'event_id' => $validated['event_id'],
-            'channel' => $validated['channel'],
-            'subject' => $validated['subject'] ?? null,
-            'body' => $validated['body'],
-            'recipients' => $validated['recipients'],
-            'total_count' => count($validated['recipients']),
-            'sent_count' => 0,
-            'failed_count' => 0,
-            'status' => 'pending',
-        ]);
+            $result = $this->bulkSendService->sendBulk($event, $channel, $subject);
 
-        return response()->json([
-            'message' => 'Bulk send created successfully',
-            'bulk_send' => $bulkSend,
-        ], 201);
+            $statusCode = $result['status'] === 'error' ? 400 : 201;
+            return response()->json($result, $statusCode);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
-     * Obtenir le statut d'un envoi en masse
+     * Prévisualiser le template d'un événement
      */
-    public function status(BulkSend $bulkSend)
+    public function preview(Event $event)
     {
-        // Vérifier que l'utilisateur est propriétaire
-        if ($bulkSend->user_id !== Auth::id()) {
+        $template = $event->template;
+        if (!$template) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Unauthorized',
-            ], 403);
+                'message' => 'Aucun template pour cet événement',
+            ], 404);
         }
 
         return response()->json([
-            'id' => $bulkSend->id,
-            'channel' => $bulkSend->channel,
-            'status' => $bulkSend->status,
-            'total_count' => $bulkSend->total_count,
-            'sent_count' => $bulkSend->sent_count,
-            'failed_count' => $bulkSend->failed_count,
-            'progress' => $bulkSend->total_count > 0 
-                ? round(($bulkSend->sent_count / $bulkSend->total_count) * 100, 2)
-                : 0,
-            'started_at' => $bulkSend->started_at,
-            'completed_at' => $bulkSend->completed_at,
+            'event_id' => $event->id,
+            'event_title' => $event->title,
+            'template_id' => $template->id,
+            'template_name' => $template->name,
+            'template_content' => $template->content,
+            'guests_count' => $event->guests()->count(),
         ]);
     }
 
     /**
-     * Lister les envois en masse
+     * Obtenir les informations d'envoi pour un événement
      */
-    public function index(Request $request)
+    public function info(Event $event)
     {
-        $query = BulkSend::where('user_id', Auth::id());
-
-        if ($request->has('limit')) {
-            $query->limit($request->input('limit'));
-        }
-
-        $bulkSends = $query->orderBy('created_at', 'desc')->get();
-
-        return response()->json($bulkSends);
-    }
-
-    /**
-     * Annuler un envoi en masse
-     */
-    public function cancel(BulkSend $bulkSend)
-    {
-        // Vérifier que l'utilisateur est propriétaire
-        if ($bulkSend->user_id !== Auth::id()) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Unauthorized',
-            ], 403);
-        }
-
-        if ($bulkSend->status === 'completed') {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Cannot cancel a completed bulk send',
-            ], 400);
-        }
-
-        $bulkSend->cancel();
+        $template = $event->template;
+        $guests = $event->guests()->get();
 
         return response()->json([
-            'message' => 'Bulk send cancelled successfully',
-            'bulk_send' => $bulkSend,
-        ]);
-    }
-
-    /**
-     * Réessayer un envoi en masse
-     */
-    public function retry(BulkSend $bulkSend)
-    {
-        // Vérifier que l'utilisateur est propriétaire
-        if ($bulkSend->user_id !== Auth::id()) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Unauthorized',
-            ], 403);
-        }
-
-        if ($bulkSend->status === 'pending') {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Cannot retry a pending bulk send',
-            ], 400);
-        }
-
-        $bulkSend->retry();
-
-        return response()->json([
-            'message' => 'Bulk send retry initiated',
-            'bulk_send' => $bulkSend,
+            'event_id' => $event->id,
+            'event_title' => $event->title,
+            'template' => $template ? [
+                'id' => $template->id,
+                'name' => $template->name,
+            ] : null,
+            'guests_count' => $guests->count(),
+            'guests' => $guests->map(fn($g) => [
+                'id' => $g->id,
+                'name' => $g->name,
+                'email' => $g->email,
+                'phone' => $g->phone,
+            ]),
         ]);
     }
 }

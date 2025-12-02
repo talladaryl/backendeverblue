@@ -59,12 +59,12 @@ class GuestController extends Controller
         $guests = [];
         foreach ($request->validated()['guests'] as $guestData) {
             $guests[] = Guest::create([
-                'event_id' => $event->id,
+                // 'event_id' => $event->id,
                 'full_name' => $guestData['full_name'] ?? 'Invité sans nom',
                 'email' => $guestData['email'] ?? null,
                 'phone' => $guestData['phone'] ?? null,
-                'plus_one_allowed' => $guestData['plus_one_allowed'] ?? false,
-                'metadata' => $guestData['metadata'] ?? null,
+                'canal' => $guestData['canal'] ?? null,
+                // 'metadata' => $guestData['metadata'] ?? null,
             ]);
         }
 
